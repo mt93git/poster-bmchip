@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>BM-Chip C2-LOEX | Portail Interactif Poster</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(22, 30, 46, 0.85);
+      --card-border: rgba(255, 255, 255, 0.12);
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --primary: #0284c7;
+      --primary-hover: #0369a1;
+      --accent: #e11d48;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: radial-gradient(circle at 50% 20%, #1e293b 0%, #090d16 100%);
+      color: var(--text-main);
+      font-family: var(--font);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.25rem;
+      text-align: center;
+    }
+    .container {
+      max-width: 480px;
+      width: 100%;
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 2rem 1.5rem;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+      animation: fadeIn 0.4s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .header-logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      padding: 0.35rem 0.85rem;
+      border-radius: 999px;
+      margin-bottom: 1.2rem;
+    }
+    h1 {
+      font-size: 1.45rem;
+      font-weight: 700;
+      line-height: 1.3;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, #ffffff 40%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .subtitle {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+      line-height: 1.45;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.3rem 0.8rem;
+      border-radius: 999px;
+      margin-bottom: 1.25rem;
+    }
+    .badge-on {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: #34d399;
+    }
+    .badge-off {
+      background: rgba(225, 29, 72, 0.15);
+      border: 1px solid rgba(225, 29, 72, 0.35);
+      color: #fb7185;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .pulse {
+      animation: pulseAnim 1.8s infinite;
+    }
+    @keyframes pulseAnim {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.35); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+    .spinner {
+      width: 44px;
+      height: 44px;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-top-color: #38bdf8;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 1.2rem auto;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 0.85rem 1.2rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #fff;
+      background: var(--primary);
+      border: none;
+      border-radius: 12px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 15px rgba(2, 132, 199, 0.35);
+      margin-top: 0.6rem;
+    }
+    .btn:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: none;
+      color: #cbd5e1;
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+    .info-box {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 1rem;
+      font-size: 0.85rem;
+      color: #cbd5e1;
+      text-align: left;
+      margin-top: 1.25rem;
+      line-height: 1.5;
+    }
+    .info-box strong { color: #f8fafc; }
+    .footer {
+      margin-top: 1.5rem;
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <div class="container" id="cardContainer">
+    <div class="header-logo">
+      <span>LOEX • UNIVERSITÉ LAVAL</span>
+    </div>
+
+    <!-- ÉTAT EN COURS DE CHARGEMENT -->
+    <div id="loadingState">
+      <div class="spinner"></div>
+      <h1 id="dynTitle">Connexion au Jumeau Numérique...</h1>
+      <p class="subtitle" id="dynSubtitle">Initialisation du modèle biophysique BM-Chip C2</p>
+      <div class="badge badge-on">
+        <span class="dot pulse"></span>
+        <span>Redirection automatique en cours</span>
+      </div>
+      <a href="#" id="directBtn" class="btn">Accéder immédiatement</a>
+    </div>
+
+    <!-- ÉTAT OFF (KILL-SWITCH / SESSION CLÔTURÉE) -->
+    <div id="offState" class="hidden">
+      <div class="badge badge-off">
+        <span class="dot"></span>
+        <span>Accès Interactif Clôturé</span>
+      </div>
+      <h1>BM-Chip C2-LOEX</h1>
+      <p class="subtitle" id="offMessage">
+        La session interactive pour ce congrès est actuellement terminée. Les jumeaux numériques et données de simulation sont mis en veille.
+      </p>
+      <div class="info-box">
+        <p><strong>Laboratoire :</strong> LOEX / Centre de Recherche du CHU de Québec</p>
+        <p><strong>Auteur :</strong> Maxime Tricaud (PhD Cand. Yale / LOEX Univ. Laval)</p>
+        <p><strong>Affiliation :</strong> Département de Chirurgie, Faculté de Médecine, Université Laval</p>
+      </div>
+      <a href="mailto:maxime.tricaud.1@ulaval.ca?subject=Demande%20Reprints%20BM-Chip%20LOEX" class="btn" style="margin-top: 1.25rem;">
+        ✉️ Demander un accès / Reprint PDF
+      </a>
+    </div>
+
+    <div class="footer">
+      Système d'Accès Dynamique BM-Chip • Gouvernance LOEX 2026
+    </div>
+  </div>
+
+  <script>
+    (async function initGatekeeper() {
+      const defaultTarget = "viewer3d.html";
+      const directBtn = document.getElementById("directBtn");
+      const loadingState = document.getElementById("loadingState");
+      const offState = document.getElementById("offState");
+      const offMessage = document.getElementById("offMessage");
+      const dynTitle = document.getElementById("dynTitle");
+
+      try {
+        // Cache-buster pour refléter immédiatement toute modification de config.json
+        const response = await fetch("config.json?t=" + Date.now(), { cache: "no-store" });
+        if (!response.ok) throw new Error("Config indisponible");
+        const config = await response.json();
+
+        if (config.status === "OFF") {
+          loadingState.classList.add("hidden");
+          offState.classList.remove("hidden");
+          if (config.off_message) {
+            offMessage.textContent = config.off_message;
+          }
+          return;
+        }
+
+        // Statut ON : détermination de la cible
+        const target = config.target_url || defaultTarget;
+        directBtn.href = target;
+        dynTitle.textContent = config.project_title || "Redirection vers le Jumeau 3D...";
+
+        // Redirection fluide après 1.2 seconde (permet au visiteur de voir l'écran d'accueil)
+        setTimeout(() => {
+          window.location.replace(target);
+        }, 1200);
+
+      } catch (err) {
+        console.warn("Mode dégradé / local :", err);
+        // Fallback résilient en cas d'absence de réseau ou d'erreur de config
+        directBtn.href = defaultTarget;
+        setTimeout(() => {
+          window.location.replace(defaultTarget);
+        }, 1500);
+      }
+    })();
+  </script>
+</body>
+</html>

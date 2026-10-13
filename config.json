@@ -1,0 +1,11 @@
+{
+  "status": "ON",
+  "target_url": "viewer3d.html",
+  "live_tunnel_url": "https://carl-frederick-sponsorship-luke.trycloudflare.com/#tab=qr",
+  "project_title": "BM-Chip C2-LOEX : Niche Médullaire & Modélisation Biophysique",
+  "conference": "Congrès Scientifique 2026",
+  "author": "Maxime Tricaud (PhD Cand. Yale / LOEX Univ. Laval)",
+  "contact_email": "maxime.tricaud.1@ulaval.ca",
+  "off_message": "La session interactive pour ce congrès est actuellement clôturée. Les simulations et données complémentaires sont accessibles sur demande motivée auprès des auteurs.",
+  "last_updated": "2026-10-13"
+}
