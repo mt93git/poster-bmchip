@@ -94,9 +94,13 @@ body.qr #qr{display:block}
 #qr .grab{display:block;width:100%;background:none;border:0;color:var(--mut);font-size:12px;padding:5px 0 6px;cursor:pointer;pointer-events:auto;transition:all 0.2s ease;user-select:none;-webkit-user-select:none}
 #qr .grab:hover{color:var(--ink)}
 #qr .sheet.min #qgrab{width:auto;margin:0 auto;padding:8px 20px;border-radius:24px;background:rgba(15,23,42,0.90);border:1.5px solid #38bdf8;color:#38bdf8;font-weight:700;font-size:12.5px;letter-spacing:0.3px;box-shadow:0 4px 20px rgba(0,0,0,0.45),0 0 12px rgba(56,189,248,0.3);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);cursor:pointer;pointer-events:auto;transition:transform 0.15s ease,box-shadow 0.15s ease,background 0.15s ease}
-body.light #qr .sheet.min #qgrab{background:rgba(255,255,255,0.94);border-color:#0284c7;color:#0284c7;box-shadow:0 4px 20px rgba(0,0,0,0.15),0 0 10px rgba(2,132,199,0.25)}
+[data-theme="light"] #qr .sheet.min #qgrab{background:rgba(255,255,255,0.96)!important;border-color:#0284c7!important;color:#0284c7!important;box-shadow:0 4px 20px rgba(0,0,0,0.12),0 0 12px rgba(2,132,199,0.25)!important}
 #qr .sheet.min #qgrab:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,0,0,0.55),0 0 18px rgba(56,189,248,0.45)}
 #qr .sheet.min #qgrab:active{transform:translateY(0)}
+.qr-card{background:rgba(15,23,42,0.45);border:1px solid rgba(148,163,184,0.18);border-radius:8px;padding:6px 9px}
+[data-theme="light"] .qr-card{background:#ffffff!important;border:1px solid #cbd5e1!important;box-shadow:0 1px 4px rgba(0,0,0,0.06)!important}
+.qr-box{display:block;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:6px 9px;margin-bottom:6px}
+[data-theme="light"] .qr-box{background:#ffffff!important;border:1px solid #cbd5e1!important;box-shadow:0 1px 4px rgba(0,0,0,0.06)!important}
 #qr .sheet h3{margin:10px 0 4px}
 #qr canvas{width:100%;height:auto}
 #qr .ctl{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin:4px 0}
@@ -110,7 +114,8 @@ body.light #qr .sheet.min #qgrab{background:rgba(255,255,255,0.94);border-color:
 @media(min-width:900px){#qr .sheet{left:auto;right:12px;top:84px;bottom:12px;width:420px;max-height:none;border:1px solid var(--line);border-radius:12px}#qr .sheet.min{left:auto!important;right:16px!important;top:auto!important;bottom:16px!important;width:auto!important}}
 .speed-chip{min-width:36px;text-align:center;padding:3px 7px;font-size:11px;font-weight:700;transition:all 0.15s ease}
 .speed-chip.on{background:#0284c7!important;color:#fff!important;border-color:#38bdf8!important;box-shadow:0 0 8px rgba(56,189,248,0.4)}
-.mini-bar-track{width:100%;height:3.5px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;margin-top:4px}
+[data-theme="light"] .speed-chip.on{background:#0284c7!important;color:#ffffff!important;border-color:#0284c7!important;box-shadow:0 1px 6px rgba(2,132,199,0.35)!important}
+.mini-bar-track{width:100%;height:3.5px;background:var(--track-bg);border-radius:2px;overflow:hidden;margin-top:4px}
 .mini-bar-fill{height:100%;border-radius:2px;transition:width 0.1s linear,background 0.2s ease}
 details.expert-box summary::-webkit-details-marker{display:none}
 details.expert-box summary{list-style:none}
@@ -1263,9 +1268,9 @@ const MAGMA=[[0,0,4],[28,16,68],[79,18,123],[129,37,129],[181,54,122],[229,80,10
 function cmap(tab,t){if(isNaN(t)||t<=0)t=0;else if(t>=1)t=1;const x=t*(tab.length-1),i=Math.min(tab.length-2,Math.floor(x)),f=x-i;const a=tab[i]||tab[0],b=tab[i+1]||tab[tab.length-1];return [a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f,a[2]+(b[2]-a[2])*f];}
 const CLS={below:[86,180,233],in:[0,158,115],above:[230,159,0]};
 
-const QR={on:false,q:'o2',min:false,bandOn:false,unit:'pct'};   // onglet public : activé par #tab=qr
+const QR={on:false,q:'o2',min:true,bandOn:false,unit:'pct'};   // onglet public : activé par #tab=qr
 /* ---------- état ---------- */
-const S={mode:'o2',sid:'cycle_COC',t:0,v:0,tmode:'lin',play:true,speed:200,cfg:'bench',Q:Q0,exag:12,cmode:'scn',mat:'PDMS',phi:null,fph:'perf',pulse:true,tp:0,pulseSpeed:1,theme:(typeof localStorage!=='undefined'&&localStorage.getItem('bmchip_theme'))||'dark',
+const S={mode:'o2',sid:'cycle_COC',t:0,v:0,tmode:'lin',play:true,speed:500,cfg:'bench',Q:Q0,exag:12,cmode:'scn',mat:'PDMS',phi:null,fph:'perf',pulse:true,tp:0,pulseSpeed:1,theme:(typeof localStorage!=='undefined'&&localStorage.getItem('bmchip_theme'))||'light',
   L:{floor:true,ceil:false,slice:false,cutL:true,cutT:true,glass:true,part:true,main:true,ports:true,compartments:true},
   ceilOp:0.55,zslice:0.5,xcut:XC,ycut:YC,pspeed:40,view:'oblique'};
 const MODES=[['o2','🫧 O₂ dissous','Taylor–Aris · physioxie'],['velocity','⚡ Vitesse u(x,y,z)','Poiseuille en z'],['shear','🌊 Cisaillement τ','plancher · plafond · τ(z)'],['spm','🛡️ Sorption SPM','PDMS vs COC passivé']];
@@ -3940,6 +3945,7 @@ function renderQR(){
 
   const phys = getCyclePhysics(S.t);
   const isPulse = phys.isPulse;
+  const isLight = S.theme === 'light';
   const q = QR_Q.find(x => x[0] === m);
 
   el.innerHTML = `<div class="hd">
@@ -3961,16 +3967,16 @@ function renderQR(){
       <div class="band" id="qband" style="font-size:10.5px;margin:1px 0 4px;color:var(--ink)"></div>
 
       <!-- 2. Dynamic Phase Banner -->
-      <div id="cycle_status_banner" style="display:flex;align-items:center;font-size:11px;font-weight:700;padding:5px 8px;border-radius:6px;border:1px solid ${isPulse?'rgba(225,29,72,0.35)':'rgba(2,132,199,0.35)'};background:${isPulse?'rgba(225,29,72,0.12)':'rgba(2,132,199,0.12)'};color:${isPulse?'#fb7185':'#38bdf8'};margin-bottom:6px">
+      <div id="cycle_status_banner" style="display:flex;align-items:center;font-size:11px;font-weight:700;padding:5px 8px;border-radius:6px;border:1px solid ${isPulse?'rgba(225,29,72,0.35)':'rgba(2,132,199,0.35)'};background:${isPulse?(isLight?'rgba(225,29,72,0.08)':'rgba(225,29,72,0.12)'):(isLight?'rgba(2,132,199,0.08)':'rgba(2,132,199,0.12)')};color:${isPulse?(isLight?'#be123c':'#fb7185'):(isLight?'#0369a1':'#38bdf8')};margin-bottom:6px">
         <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${isPulse?'#e11d48':'#0284c7'};margin-right:6px;box-shadow:0 0 6px ${isPulse?'#e11d48':'#0284c7'}"></span>
         ${isPulse?'<b>0–5 min : PERFUSION ACTIVE</b> · Apport nutriments (10.8 µL/min) · Récolte OUT1':'<b>5–35 min : STASE PERMISSIVE</b> · Diapédèse 7 µm sans traînée (Q = 0) · Déplétion O₂'}
       </div>
 
       <!-- 3. Primary Cycle Timeline Slider (0 - 35 min) & Time Accelerations -->
-      <div style="display:block;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:6px 9px;margin-bottom:6px">
+      <div class="qr-box">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
           <span style="font-size:11px;font-weight:700;color:var(--ink)">⏱️ CYCLE TEMPOREL (0 – 35 min)</span>
-          <span id="cycle_time_readout" class="mono" style="font-size:11.5px;font-weight:800;color:#38bdf8">${(phys.t_sec/60).toFixed(1)} min / 35.0 min</span>
+          <span id="cycle_time_readout" class="mono" style="font-size:11.5px;font-weight:800;color:${isLight?'#0284c7':'#38bdf8'}">${(phys.t_sec/60).toFixed(1)} min / 35.0 min</span>
         </div>
         
         <div class="slider-wrap" style="position:relative;width:100%;margin:2px 0">
@@ -3980,17 +3986,17 @@ function renderQR(){
         <div style="position:relative;width:100%;height:16px;font-size:9.5px;color:var(--mut);margin-top:2px;font-family:sans-serif">
           <span id="tag_perf" style="position:absolute;left:0;color:#009E73;font-weight:700;cursor:pointer" title="0 min : Début Perfusion">0 min</span>
           <span id="tag_split" style="position:absolute;left:14.3%;color:#f59e0b;font-weight:700;cursor:pointer;white-space:nowrap;transform:translateX(0)" title="5 min : Bascule en stase">▲ 5 min (Bascule)</span>
-          <span id="tag_stasis" style="position:absolute;right:0;color:#56B4E9;font-weight:700;cursor:pointer" title="35 min : Fin de stase">35 min (Stase)</span>
+          <span id="tag_stasis" style="position:absolute;right:0;color:${isLight?'#0284c7':'#56B4E9'};font-weight:700;cursor:pointer" title="35 min : Fin de stase">35 min (Stase)</span>
         </div>
 
         <!-- Play & Time Acceleration Buttons -->
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:6px;border-top:1px solid rgba(255,255,255,0.06);padding-top:6px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:6px;border-top:1px solid var(--line);padding-top:6px">
           <button id="qplay" class="chip" style="min-width:76px;font-weight:700;padding:3px 9px">${S.play?'⏸ pause':'▶ lecture'}</button>
           <div style="display:flex;gap:4px;align-items:center">
             <span style="font-size:10.5px;color:var(--mut);font-weight:600">Vitesse :</span>
             <button id="qspd_1" class="chip speed-chip ${S.speed===1?'on':''}" style="padding:2px 7px;font-size:11px;font-weight:700">×1</button>
             <button id="qspd_20" class="chip speed-chip ${S.speed===20?'on':''}" style="padding:2px 7px;font-size:11px;font-weight:700">×20</button>
-            <button id="qspd_200" class="chip speed-chip ${S.speed===200?'on':''}" style="padding:2px 7px;font-size:11px;font-weight:700">×200</button>
+            <button id="qspd_500" class="chip speed-chip ${S.speed===500?'on':''}" style="padding:2px 7px;font-size:11px;font-weight:700">×500</button>
             <button id="qspd_1000" class="chip speed-chip ${S.speed===1000?'on':''}" style="padding:2px 7px;font-size:11px;font-weight:700">×1000</button>
           </div>
         </div>
@@ -3999,29 +4005,29 @@ function renderQR(){
       <!-- 4. Dynamic Live Telemetry Gauges (Hydrodynamic & Oxygen) -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">
         <!-- Card 1 : Hydrodynamique Canal -->
-        <div style="background:rgba(15,23,42,0.45);border:1px solid rgba(148,163,184,0.18);border-radius:8px;padding:5px 8px">
+        <div class="qr-card">
           <div style="display:flex;justify-content:space-between;align-items:center;font-size:9.5px;color:var(--mut);font-weight:700;text-transform:uppercase;letter-spacing:0.4px">
             <span>🌊 Écoulement</span>
-            <span id="dyn_flow_badge" style="color:${isPulse?'#009E73':'#56B4E9'};font-weight:800">${isPulse?'ACTIF':'STASE'}</span>
+            <span id="dyn_flow_badge" style="color:${isPulse?'#009E73':(isLight?'#0284c7':'#56B4E9')};font-weight:800">${isPulse?'ACTIF':'STASE'}</span>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px">
             <span style="font-size:10.5px;color:var(--ink)">Débit Q :</span>
-            <span id="dyn_q_val" class="mono" style="font-size:11px;font-weight:800;color:${isPulse?'#009E73':'#56B4E9'}">${phys.Q.toFixed(1)} µL/min</span>
+            <span id="dyn_q_val" class="mono" style="font-size:11px;font-weight:800;color:${isPulse?'#009E73':(isLight?'#0284c7':'#56B4E9')}">${phys.Q.toFixed(1)} µL/min</span>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:1px">
             <span style="font-size:10.5px;color:var(--ink)">Cisaillement :</span>
-            <span id="dyn_tau_val" class="mono" style="font-size:11px;font-weight:800;color:${isPulse?'#009E73':'#56B4E9'}">${phys.tau_w.toFixed(2)} dyn/cm²</span>
+            <span id="dyn_tau_val" class="mono" style="font-size:11px;font-weight:800;color:${isPulse?'#009E73':(isLight?'#0284c7':'#56B4E9')}">${phys.tau_w.toFixed(2)} dyn/cm²</span>
           </div>
-          <div style="width:100%;height:3px;background:rgba(255,255,255,0.1);border-radius:2px;margin-top:4px;overflow:hidden">
-            <div id="dyn_flow_bar" style="width:${(phys.Q/10.8*100).toFixed(0)}%;height:100%;background:${isPulse?'#009E73':'#56B4E9'};transition:width 0.1s linear,background 0.2s"></div>
+          <div class="mini-bar-track">
+            <div id="dyn_flow_bar" class="mini-bar-fill" style="width:${(phys.Q/10.8*100).toFixed(0)}%;background:${isPulse?'#009E73':(isLight?'#0284c7':'#56B4E9')}"></div>
           </div>
         </div>
 
         <!-- Card 2 : Teneurs en Oxygène -->
-        <div style="background:rgba(15,23,42,0.45);border:1px solid rgba(148,163,184,0.18);border-radius:8px;padding:5px 8px">
+        <div class="qr-card">
           <div style="display:flex;justify-content:space-between;align-items:center;font-size:9.5px;color:var(--mut);font-weight:700;text-transform:uppercase;letter-spacing:0.4px">
             <span>🫧 Teneurs en O₂</span>
-            <span id="dyn_o2_badge" style="color:#38bdf8;font-weight:800">${isPulse?'PHYSIOXIE':'DÉPLÉTION'}</span>
+            <span id="dyn_o2_badge" style="color:${isPulse?(isLight?'#0284c7':'#38bdf8'):(isLight?'#64748b':'#94a3b8')};font-weight:800">${isPulse?'PHYSIOXIE':'DÉPLÉTION'}</span>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px">
             <span style="font-size:10.5px;color:var(--ink)">Canal (40 µm) :</span>
@@ -4029,10 +4035,10 @@ function renderQR(){
           </div>
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:1px">
             <span style="font-size:10.5px;color:var(--ink)">Niche CSM :</span>
-            <span id="dyn_o2_niche" class="mono" style="font-size:11px;font-weight:800;color:#38bdf8">${phys.o2_niche_basal.toFixed(1)}% O₂</span>
+            <span id="dyn_o2_niche" class="mono" style="font-size:11px;font-weight:800;color:${isLight?'#0284c7':'#38bdf8'}">${phys.o2_niche_basal.toFixed(1)}% O₂</span>
           </div>
-          <div style="width:100%;height:3px;background:rgba(255,255,255,0.1);border-radius:2px;margin-top:4px;overflow:hidden">
-            <div id="dyn_o2_bar" style="width:${Math.max(0,Math.min(100,(phys.o2_vasc_mean/5.0*100))).toFixed(0)}%;height:100%;background:#38bdf8;transition:width 0.1s linear,background 0.2s"></div>
+          <div class="mini-bar-track">
+            <div id="dyn_o2_bar" class="mini-bar-fill" style="width:${Math.max(0,Math.min(100,(phys.o2_vasc_mean/5.0*100))).toFixed(0)}%;background:${isPulse?(isLight?'#0284c7':'#38bdf8'):(isLight?'#64748b':'#94a3b8')}"></div>
           </div>
         </div>
       </div>
@@ -4209,11 +4215,11 @@ function renderQR(){
   const pl=$('#qplay');if(pl)pl.addEventListener('click',()=>{S.play=!S.play;sync();});
   const qt=$('#qt');if(qt)qt.addEventListener('input',()=>{S.v=+qt.value;S.t=tOfV(S.v);S.play=false;dirty=true;sync();});
   
-  // Speed acceleration toggles (x1, x20, x200, x1000)
-  const sp1=$('#qspd_1'), sp20=$('#qspd_20'), sp200=$('#qspd_200'), sp1000=$('#qspd_1000');
+  // Speed acceleration toggles (x1, x20, x500, x1000)
+  const sp1=$('#qspd_1'), sp20=$('#qspd_20'), sp500=$('#qspd_500'), sp1000=$('#qspd_1000');
   if(sp1) sp1.addEventListener('click', ()=>{ S.speed=1; S.play=true; sync(); });
   if(sp20) sp20.addEventListener('click', ()=>{ S.speed=20; S.play=true; sync(); });
-  if(sp200) sp200.addEventListener('click', ()=>{ S.speed=200; S.play=true; sync(); });
+  if(sp500) sp500.addEventListener('click', ()=>{ S.speed=500; S.play=true; sync(); });
   if(sp1000) sp1000.addEventListener('click', ()=>{ S.speed=1000; S.play=true; sync(); });
 
   // Phase tag click shortcuts
@@ -4318,42 +4324,53 @@ function qrSync(){
   if(bp) bp.textContent = S.play ? '⏸ pause' : '▶ lecture';
 
   // 4. Speed pills highlight
-  const sp1=$('#qspd_1'), sp20=$('#qspd_20'), sp200=$('#qspd_200'), sp1000=$('#qspd_1000');
+  const sp1=$('#qspd_1'), sp20=$('#qspd_20'), sp500=$('#qspd_500'), sp1000=$('#qspd_1000');
   if(sp1) sp1.classList.toggle('on', S.speed === 1);
   if(sp20) sp20.classList.toggle('on', S.speed === 20);
-  if(sp200) sp200.classList.toggle('on', S.speed === 200);
+  if(sp500) sp500.classList.toggle('on', S.speed === 500);
   if(sp1000) sp1000.classList.toggle('on', S.speed === 1000);
+
+  const isLight = S.theme === 'light';
+  const stasColor = isLight ? '#0284c7' : '#56B4E9';
+  const perfColor = '#009E73';
+  const accColor = isLight ? '#0284c7' : '#38bdf8';
+  const dimColor = isLight ? '#64748b' : '#94a3b8';
+
+  const timeEl = $('#cycle_time_readout');
+  if(timeEl) timeEl.style.color = accColor;
 
   // 5. Dynamic Phase Banner
   const banner = $('#cycle_status_banner');
   if(banner){
     if(phys.isPulse){
       banner.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#e11d48;margin-right:6px;box-shadow:0 0 6px #e11d48"></span><b>0–5 min : PERFUSION ACTIVE</b> · Apport O₂ & nutriments · Récolte OUT1`;
-      banner.style.background = 'rgba(225, 29, 72, 0.12)';
+      banner.style.background = isLight ? 'rgba(225, 29, 72, 0.08)' : 'rgba(225, 29, 72, 0.12)';
       banner.style.borderColor = 'rgba(225, 29, 72, 0.35)';
-      banner.style.color = '#fb7185';
+      banner.style.color = isLight ? '#be123c' : '#fb7185';
     } else {
       banner.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#0284c7;margin-right:6px;box-shadow:0 0 6px #0284c7"></span><b>5–35 min : STASE PERMISSIVE</b> · Diapédèse sans traînée (Q = 0) · Déplétion O₂`;
-      banner.style.background = 'rgba(2, 132, 199, 0.12)';
+      banner.style.background = isLight ? 'rgba(2, 132, 199, 0.08)' : 'rgba(2, 132, 199, 0.12)';
       banner.style.borderColor = 'rgba(2, 132, 199, 0.35)';
-      banner.style.color = '#38bdf8';
+      banner.style.color = isLight ? '#0369a1' : '#38bdf8';
     }
   }
 
   // 6. Dynamic Telemetry values & bars
   set('dyn_q_val', phys.Q.toFixed(1) + ' µL/min');
   set('dyn_tau_val', phys.tau_w.toFixed(2) + ' dyn/cm²');
+  const qValEl = $('#dyn_q_val'); if(qValEl) qValEl.style.color = phys.isPulse ? perfColor : stasColor;
+  const tauValEl = $('#dyn_tau_val'); if(tauValEl) tauValEl.style.color = phys.isPulse ? perfColor : stasColor;
   
   const dynFlowBadge = $('#dyn_flow_badge');
   if(dynFlowBadge){
     dynFlowBadge.textContent = phys.isPulse ? 'ACTIF' : 'STASE';
-    dynFlowBadge.style.color = phys.isPulse ? '#009E73' : '#56B4E9';
+    dynFlowBadge.style.color = phys.isPulse ? perfColor : stasColor;
   }
   const dynFlowBar = $('#dyn_flow_bar');
   if(dynFlowBar){
     const pct = (phys.Q / 10.8) * 100;
     dynFlowBar.style.width = pct.toFixed(0) + '%';
-    dynFlowBar.style.background = phys.isPulse ? '#009E73' : '#56B4E9';
+    dynFlowBar.style.background = phys.isPulse ? perfColor : stasColor;
   }
 
   if(phys.isPulse){
@@ -4363,17 +4380,18 @@ function qrSync(){
     set('dyn_o2_vasc', phys.o2_vasc_in.toFixed(1) + '% (Déplétion)');
     set('dyn_o2_niche', phys.o2_niche_basal.toFixed(1) + '% O₂ (' + (phys.o2_niche_basal < 0.1 ? 'Anoxie' : 'Chute') + ')');
   }
+  const o2NicheEl = $('#dyn_o2_niche'); if(o2NicheEl) o2NicheEl.style.color = accColor;
 
   const dynO2Badge = $('#dyn_o2_badge');
   if(dynO2Badge){
     dynO2Badge.textContent = phys.isPulse ? 'PHYSIOXIE' : (phys.o2_niche_basal < 0.1 ? 'ANOXIE' : 'DÉPLÉTION');
-    dynO2Badge.style.color = phys.isPulse ? '#38bdf8' : (phys.o2_niche_basal < 0.1 ? '#94a3b8' : '#e69f00');
+    dynO2Badge.style.color = phys.isPulse ? accColor : (phys.o2_niche_basal < 0.1 ? dimColor : '#e69f00');
   }
   const dynO2Bar = $('#dyn_o2_bar');
   if(dynO2Bar){
     const pctO2 = (phys.o2_vasc_mean / 5.0) * 100;
     dynO2Bar.style.width = Math.min(100, Math.max(0, pctO2)).toFixed(0) + '%';
-    dynO2Bar.style.background = phys.isPulse ? '#38bdf8' : '#94a3b8';
+    dynO2Bar.style.background = phys.isPulse ? accColor : dimColor;
   }
 
   // 7. Update calibration equations if phase flipped
@@ -4564,12 +4582,15 @@ function qrLegend(){
 }
 function initQR(){
   document.body.classList.add('qr');qrLayers();
+  QR.min = true;
   S.pulse=false;S.exag=S.exag||12;
   for(const l of [edgeBottom,edgeTop])l.material.color.set(0xd8e2ee);
   if(S.mode==='o2'&&!F.o2[S.sid])S.sid=Object.keys(F.o2)[0];
   if(S.mode==='o2'&&F.o2.cycle_COC&&!new URLSearchParams(location.hash.slice(1)).get('o2'))S.sid='cycle_COC';
   S.t=0;S.v=0;S.play=true;qrCmode();
-  if(!new URLSearchParams(location.hash.slice(1)).get('sp')) S.speed = 200;
+  const H = new URLSearchParams(location.hash.slice(1));
+  applyTheme(H.get('theme') || 'light');
+  if(!H.get('sp')) S.speed = 500;
   if(!S.phi)S.phi=Object.keys(F.spm.fields).filter(k=>k!=='0').sort((a,b)=>b-a)[0];
   renderQR();buildModeCtl();dirty=true;sync();window.addEventListener('resize',qrOffset);}
 window.initQR=initQR;window.qrSync=qrSync;window.qrLegend=qrLegend;window.qrOffset=qrOffset;window.__QR=QR;
@@ -4585,6 +4606,8 @@ function applyHash(){
     QR.q=['o2','velocity','shear','spm'].includes(H.get('q'))?H.get('q'):'o2';
     S.mode=QR.q;
   }
+  if(H.get('theme')) S.theme = H.get('theme');
+  else if(QR.on) S.theme = 'light';
   if(H.get('m'))S.mode=H.get('m');if(H.get('o2'))S.sid=H.get('o2');if(H.get('t'))S.t=+H.get('t');if(H.get('exag'))S.exag=+H.get('exag');if(H.get('cm'))S.cmode=H.get('cm');
   if(H.get('mat'))S.mat=H.get('mat');if(H.get('phi'))S.phi=H.get('phi');if(H.get('Q'))S.Q=+H.get('Q');if(H.get('cfg'))S.cfg=H.get('cfg');
   if(H.get('xc'))S.xcut=XC+ +H.get('xc')*1000;if(H.get('yc'))S.ycut=YC+ +H.get('yc')*1000;if(H.get('zs'))S.zslice=+H.get('zs');
