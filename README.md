@@ -4,11 +4,18 @@ Portail de redirection souverain pour les posters scientifiques présentés en c
 
 ---
 
-## 📱 URL Canonique Immuable (Imprimée sur le Poster)
+## 📱 URLs Canoniques Immuables (Gravées sur les Posters)
 
-👉 **https://mt93git.github.io/poster-bmchip/**
+1. **URL Directe Jumeau 3D (Recommandée Poster) :**
+   👉 **https://mt93git.github.io/poster-bmchip/viewer3d.html#tab=qr**
+   *(Charge directement le jumeau numérique 3D en mode Jour, volet masqué par défaut, vitesse x500).*
 
-Cette URL est gravée sur le QR Code du poster imprimé. Elle ne changera **jamais**.
+2. **URL Passerelle Racine (Portail dynamique & Kill-Switch) :**
+   👉 **https://mt93git.github.io/poster-bmchip/**
+   *(Redirige instantanément vers le jumeau 3D ou affiche la page de veille selon `config.json`).*
+
+> [!IMPORTANT]
+> **CONTRAT D'IMMUTABILITÉ (WORM) :** Ces deux URLs et les fichiers QR correspondants archivés dans [`archive_frozen_qr/`](archive_frozen_qr/) sont **définitivement gelés**. Ne jamais renommer ce dépôt, ne jamais désactiver GitHub Pages, et ne jamais supprimer `viewer3d.html`. Seul le code interne peut être mis à jour. Voir la notice complète dans [`archive_frozen_qr/README.md`](archive_frozen_qr/README.md).
 
 ---
 
