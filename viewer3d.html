@@ -102,6 +102,12 @@ body.qr #qr{display:block}
 #qr table td:first-child{white-space:nowrap}
 #qr .foot{margin-top:8px}
 @media(min-width:900px){#qr .sheet{left:auto;right:12px;top:84px;bottom:12px;width:420px;max-height:none;border:1px solid var(--line);border-radius:12px}}
+.speed-chip{min-width:36px;text-align:center;padding:3px 7px;font-size:11px;font-weight:700;transition:all 0.15s ease}
+.speed-chip.on{background:#0284c7!important;color:#fff!important;border-color:#38bdf8!important;box-shadow:0 0 8px rgba(56,189,248,0.4)}
+.mini-bar-track{width:100%;height:3.5px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;margin-top:4px}
+.mini-bar-fill{height:100%;border-radius:2px;transition:width 0.1s linear,background 0.2s ease}
+details.expert-box summary::-webkit-details-marker{display:none}
+details.expert-box summary{list-style:none}
 
 
 /* Authentic Mathematical Fraction Engine (Numerator / Denominator, LHS = RHS) */
@@ -2539,9 +2545,86 @@ function stepParticles(dtSim){if(!S.L.part||FP===0)return;   // stase : particul
 
 /* ---------- champs courants ---------- */
 const CUR={p:new Float32Array(NX*NY),ub:new Float32Array(NX*NY),tau:new Float32Array(NX*NY),zOK:true,kw:0,mask:null,idx:null,sc:null,cfgId:'bench'};
-const tEnd=()=>{const c=cycOf();if(c){const tp=c.t_pulse_s||3600,ts=c.t_stasis_s>0?c.t_stasis_s:(tp*0.5);return tp+ts;}const ts=F.o2[S.sid].t_s;return ts[ts.length-1];};
-function tOfV(v){const c=cycOf();if(c){const tp=c.t_pulse_s||3600,ts=c.t_stasis_s>0?c.t_stasis_s:(tp*0.5);return v<=500?tp*v/500:tp+ts*((v-500)/500)**2;}return tEnd()*(v/1000)**2;}
-function vOfT(t){const c=cycOf();if(c){const tp=c.t_pulse_s||3600,ts=c.t_stasis_s>0?c.t_stasis_s:(tp*0.5);return t<=tp?500*t/tp:500+500*Math.sqrt(Math.min(1,(t-tp)/ts));}return 1000*Math.sqrt(Math.min(1,t/tEnd()));}
+const T_CYCLE_PULSE_S = 300.0;   // 5 min (Perfusion active 10.8 µL/min)
+const T_CYCLE_STASIS_S = 1800.0; // 30 min (Stase permissive Q = 0)
+const T_CYCLE_TOTAL_S = 2100.0;  // 35 min (Cycle complet)
+
+const tEnd = () => T_CYCLE_TOTAL_S;
+
+function tOfV(v){
+  const cv = Math.max(0, Math.min(1000, v));
+  if(cv <= 500){
+    return (cv / 500.0) * T_CYCLE_PULSE_S;
+  } else {
+    return T_CYCLE_PULSE_S + ((cv - 500.0) / 500.0) * T_CYCLE_STASIS_S;
+  }
+}
+
+function vOfT(t){
+  const ct = Math.max(0, Math.min(T_CYCLE_TOTAL_S, t));
+  if(ct <= T_CYCLE_PULSE_S){
+    return (ct / T_CYCLE_PULSE_S) * 500.0;
+  } else {
+    return 500.0 + ((ct - T_CYCLE_PULSE_S) / T_CYCLE_STASIS_S) * 500.0;
+  }
+}
+
+function getCyclePhysics(t_sec){
+  const t = Math.max(0, Math.min(T_CYCLE_TOTAL_S, (typeof t_sec === 'number' ? t_sec : S.t)));
+  const isPulse = (t <= T_CYCLE_PULSE_S);
+  const tStasis = isPulse ? 0 : (t - T_CYCLE_PULSE_S);
+  
+  // 1. Débit Q (µL/min) & Cisaillement tau_w (dyn/cm²)
+  let Q = 0;
+  if(isPulse){
+    const rampIn = Math.min(1.0, t / 4.0);
+    const rampOut = Math.min(1.0, (T_CYCLE_PULSE_S - t) / 4.0);
+    Q = 10.8 * Math.min(rampIn, rampOut);
+  } else {
+    Q = 0.0;
+  }
+  const tau_w = (4.86 / 10.8) * Q;
+  const u_mean = (4.50 / 10.8) * Q;
+  
+  // 2. Oxygène Canal pO2_vasc (%)
+  let o2_vasc_in = 5.0;
+  let o2_vasc_out = 4.12;
+  if(isPulse){
+    const rampO2 = 0.88 + 0.12 * Math.min(1.0, t / 25.0);
+    o2_vasc_in = 5.0 * rampO2;
+    o2_vasc_out = 4.12 * rampO2;
+  } else {
+    const decay = Math.exp(-tStasis / 90.0);
+    o2_vasc_in = 5.0 * decay;
+    o2_vasc_out = 4.12 * decay;
+  }
+  const o2_vasc_mean = (o2_vasc_in + o2_vasc_out) / 2.0;
+  
+  // 3. Oxygène Niche Basale pO2_int (%)
+  let o2_niche_basal = 1.84;
+  if(isPulse){
+    o2_niche_basal = 1.84 * Math.min(1.0, 0.45 + 0.55 * (t / 45.0));
+  } else {
+    o2_niche_basal = 1.84 * Math.exp(-tStasis / 50.0);
+  }
+  
+  return {
+    t_sec: t,
+    t_min: t / 60.0,
+    isPulse,
+    isStasis: !isPulse,
+    tStasis,
+    Q,
+    tau_w,
+    u_mean,
+    o2_vasc_in,
+    o2_vasc_out,
+    o2_vasc_mean,
+    o2_niche_basal,
+    o2_niche_sommet: 0.0,
+    o2_osteo_plafond: 0.0
+  };
+}
 function frameInfo(sid,t){const ts=F.o2[sid].t_s;if(t<=ts[0])return [0,0,0];if(t>=ts[ts.length-1])return [ts.length-1,ts.length-1,0];let i=0;while(ts[i+1]<t)i++;return [i,i+1,(t-ts[i])/(ts[i+1]-ts[i])];}
 function prepare(){
   const m=S.mode;
@@ -2806,11 +2889,13 @@ let last=performance.now();
 function loop(now){const dt=Math.min(0.1,(now-last)/1000);last=now;
   FP=flowF(false);
   if(S.play){
-    const T=tEnd();
-    if(S.tmode==='sqrt'){S.v+=dt*(1000/30)*(S.speed/20);if(S.v>1000)S.v=0;S.t=tOfV(S.v);}
-    else{S.t+=dt*S.speed;if(S.t>T)S.t=0;S.v=vOfT(S.t);}
-    if(S.pulse&&PUL_OK&&FP>0){S.tp+=dt*S.pulseSpeed;}
-    dirty=true;sync();
+    const T = tEnd();
+    S.t += dt * S.speed;
+    if(S.t > T) S.t = 0;
+    S.v = vOfT(S.t);
+    if(S.pulse && PUL_OK && FP > 0){ S.tp += dt * S.pulseSpeed; }
+    dirty = true;
+    sync();
   }
   if(S.L.part&&S.pspeed>0&&S.mode!=='niche'){if(maxUb<=1e-9)prepareFlowOnly();stepParticles(dt*S.pspeed);}
   if(S.L.compartments&&S.showDiff!==false){
@@ -2870,32 +2955,31 @@ function qrRefBand(){
 function qrActiveBand(){
   const isPct=(S.mode==='o2'&&QR.unit==='pct');
   const k=GD.pct_to_mmHg||7.13;
+  const phys=getCyclePhysics(S.t);
+  
   if(S.mode==='o2'){
-    const qn=$('#qnotch');
-    const pos=qn?(+qn.value):(S.o2_pos!==undefined?S.o2_pos:66);
-    const c=calcO2Continuous(pos);
-    const isStasis=(pos===0);
     let loVal=0, hiVal=0, lo_mmHg=0, hi_mmHg=0;
-    let diagCol=c.diagColor||'#009E73';
+    let diagCol=phys.isPulse?'#009E73':'#56B4E9';
     let statusText='';
     
-    if(isStasis){
-      loVal=0.0; hiVal=0.2;
-      lo_mmHg=0.0; hi_mmHg=0.2*k;
-      diagCol='#56B4E9';
-      statusText='Sous le seuil vital (Stase Q = 0)';
-    } else {
-      const cin=c.pct;
-      // In-channel drop along cell monolayer (~12% drop at nominal flow)
-      const drop=Math.min(cin*0.12, 0.6);
-      const cinLo=Math.max(0, cin - drop);
-      const cinHi=cin;
+    if(!phys.isPulse){
+      const cinLo=Math.max(0.0, phys.o2_vasc_out);
+      const cinHi=Math.max(0.02, phys.o2_vasc_in);
       loVal=isPct?cinLo:(cinLo*k);
       hiVal=isPct?cinHi:(cinHi*k);
       lo_mmHg=cinLo*k;
       hi_mmHg=cinHi*k;
-      const inTarget=(cinLo>=0.95 && cinHi<=5.1);
-      statusText=inTarget?'Conforme à la cible LOEX [1 à 5 %]':'Hors cible LOEX';
+      diagCol='#56B4E9';
+      statusText=cinHi<=0.2?'Stase métabolique anoxique (Q = 0)':'Déplétion respiratoire en cours';
+    } else {
+      const cinLo=phys.o2_vasc_out;
+      const cinHi=phys.o2_vasc_in;
+      loVal=isPct?cinLo:(cinLo*k);
+      hiVal=isPct?cinHi:(cinHi*k);
+      lo_mmHg=cinLo*k;
+      hi_mmHg=cinHi*k;
+      diagCol='#009E73';
+      statusText='Conforme à la cible LOEX [1 à 5 % O₂]';
     }
     
     return {
@@ -2905,26 +2989,22 @@ function qrActiveBand(){
       loStr:fmt(loVal,1)+(isPct?' %':' mmHg'),
       hiStr:fmt(hiVal,1)+(isPct?' %':' mmHg'),
       diagColor:diagCol,
-      txt:isStasis?'0.0 % O₂ · Stase métabolique (Q = 0)':c.pct.toFixed(1)+' % O₂ (gradient canal '+loVal.toFixed(1)+' à '+hiVal.toFixed(1)+' '+(isPct?'% O₂':'mmHg')+')',
+      txt:phys.isPulse?`${phys.o2_vasc_in.toFixed(1)} % O₂ (perfusion canal ${loVal.toFixed(1)} à ${hiVal.toFixed(1)} ${isPct?'% O₂':'mmHg'})`:`${loVal.toFixed(1)} à ${hiVal.toFixed(1)} ${isPct?'% O₂':'mmHg'} (stase décrémentale)`,
       statusSummary:statusText
     };
   }
   if(S.mode==='shear'){
-    const qf=$('#qflow');
-    const pos=qf?(+qf.value):posOfFlow(S.Q);
-    const fc=calcFlowContinuous(pos);
-    const isCycleStasis=(S.v>500)||(S.fph==='stasis')||(cycOf()&&phaseAt(S.t)&&phaseAt(S.t).flow_factor===0);
-    const isStasis=(pos===0||isCycleStasis);
+    const isStasis=!phys.isPulse;
     let lo=0, hi=0;
-    let diagCol=isStasis?'#56B4E9':(fc.sColor||'#009E73');
+    let diagCol=isStasis?'#56B4E9':'#009E73';
     let statusText='';
     
     if(isStasis){
       lo=0.0; hi=0.0;
       diagCol='#56B4E9';
-      statusText=isCycleStasis?'Stase du cycle (Débit différé Q = 0)':'Arrêt manuel de flux (Q = 0)';
+      statusText='Stase du cycle (Débit différé Q = 0)';
     } else {
-      const tau=fc.tau_w;
+      const tau=phys.tau_w;
       lo=tau*0.92;
       hi=tau*1.05;
       const inTarget=(tau>=1.0 && tau<=5.0);
@@ -2937,26 +3017,22 @@ function qrActiveBand(){
       loStr:fmt(lo,2)+' dyn/cm²',
       hiStr:fmt(hi,2)+' dyn/cm²',
       diagColor:diagCol,
-      txt:isStasis?'0 dyn/cm² · Stase':fc.q.toFixed(1)+' µL/min (cisaillement canal '+lo.toFixed(2)+' à '+hi.toFixed(2)+' dyn/cm²)',
+      txt:isStasis?'0 dyn/cm² · Stase':`${phys.Q.toFixed(1)} µL/min (cisaillement canal ${lo.toFixed(2)} à ${hi.toFixed(2)} dyn/cm²)`,
       statusSummary:statusText
     };
   }
   if(S.mode==='velocity'){
-    const qf=$('#qflow');
-    const pos=qf?(+qf.value):posOfFlow(S.Q);
-    const fc=calcFlowContinuous(pos);
-    const isCycleStasis=(S.v>500)||(S.fph==='stasis')||(cycOf()&&phaseAt(S.t)&&phaseAt(S.t).flow_factor===0);
-    const isStasis=(pos===0||isCycleStasis);
+    const isStasis=!phys.isPulse;
     let lo=0, hi=0;
-    let diagCol=isStasis?'#56B4E9':(fc.uColor||'#009E73');
+    let diagCol=isStasis?'#56B4E9':'#009E73';
     let statusText='';
     
     if(isStasis){
       lo=0.0; hi=0.0;
       diagCol='#56B4E9';
-      statusText=isCycleStasis?'Stase du cycle (Débit différé Q = 0)':'Arrêt manuel de flux (Q = 0)';
+      statusText='Stase du cycle (Débit différé Q = 0)';
     } else {
-      const u=fc.u_mean;
+      const u=phys.u_mean;
       lo=u*0.95;
       hi=u*1.05;
       const inTarget=(u>=0.926 && u<=4.63);
@@ -2969,7 +3045,7 @@ function qrActiveBand(){
       loStr:fmt(lo,2)+' mm/s',
       hiStr:fmt(hi,2)+' mm/s',
       diagColor:diagCol,
-      txt:isStasis?'0 mm/s · Stase':fc.q.toFixed(1)+' µL/min (vitesse canal '+lo.toFixed(2)+' à '+hi.toFixed(2)+' mm/s)',
+      txt:isStasis?'0 mm/s · Stase':`${phys.Q.toFixed(1)} µL/min (vitesse canal ${lo.toFixed(2)} à ${hi.toFixed(2)} mm/s)`,
       statusSummary:statusText
     };
   }
@@ -3862,28 +3938,13 @@ function renderQR(){
     c_mid+=`<div class="ctl"><button class="chip ${QR.bandOn?'on':''}" id="qzones">Zone cible</button><button class="chip ${QR.bandOn?'':'on'}" id="qgrad">Dégradé</button><span style="margin:0 4px 0 8px;font-size:11px;color:#8a9ba8">Unité :</span><button class="chip ${QR.unit==='pct'?'on':''}" id="qunit_pct">% O₂</button><button class="chip ${QR.unit==='mmhg'?'on':''}" id="qunit_mmhg">mmHg</button></div>`;
   }
 
-  // ÉCHELLE D'ÉCOULEMENT DU TEMPS COMMUNE À TOUS LES ONGLETS (Perfusion active 0..500 vs Stase 500..1000)
-  const isCycStasis = (S.v > 500) || (S.fph === 'stasis') || (cycOf() && phaseAt(S.t) && phaseAt(S.t).flow_factor === 0);
-  c_mid += `<div class="ctl" style="margin-top:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:6px;padding:6px 8px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-      <span style="font-size:11px;font-weight:700;color:var(--ink)">⏱️ ÉCOULEMENT DU TEMPS & CYCLE DE PERFUSION / STASE</span>
-      <span id="cycle_phase_tag" style="font-size:10px;font-weight:700;color:${isCycStasis?'#56B4E9':'#009E73'}">${isCycStasis?'⏸ STASE (Q = 0)':'▶ PERFUSION ACTIVE'}</span>
-    </div>
-    <div style="display:flex;align-items:center;gap:6px">
-      <button id="qplay" class="chip" style="min-width:68px;font-weight:700">${S.play?'⏸ pause':'▶ lecture'}</button>
-      <input id="qt" type="range" min="0" max="1000" step="1" value="${S.v}" style="flex:1;cursor:pointer">
-      <span id="qtv" class="mono small" style="min-width:44px;text-align:right"></span>
-    </div>
-    <div style="display:flex;justify-content:space-between;width:100%;font-size:9.5px;color:var(--mut);margin-top:3px;font-family:sans-serif">
-      <span style="${!isCycStasis?'color:#009E73;font-weight:700':''}">0 min · Perfusion</span>
-      <span style="color:#8a9ba8">t = ${(S.t/60).toFixed(1)} min</span>
-      <span style="${isCycStasis?'color:#56B4E9;font-weight:700':''}">Stase · Débit différé (Q = 0)</span>
-    </div>
-  </div>`;
-  const q=QR_Q.find(x=>x[0]===m);
-  el.innerHTML=`<div class="hd">
+  const phys = getCyclePhysics(S.t);
+  const isPulse = phys.isPulse;
+  const q = QR_Q.find(x => x[0] === m);
+
+  el.innerHTML = `<div class="hd">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-      <h1 style="margin:0;font-size:15px">Chambre microfluidique BM-Chip — champs simulés</h1>
+      <h1 style="margin:0;font-size:15px">Chambre BM-Chip — Jumeau Numérique</h1>
       <button id="qtheme_toggle" class="chip theme-btn" style="padding:3px 9px;font-size:11.5px;font-weight:700;display:flex;align-items:center;gap:4px">
         ${S.theme==='light'?'🌙 Nuit':'☀️ Jour'}
       </button>
@@ -3891,19 +3952,121 @@ function renderQR(){
     ${qrTrial()}
     <div class="chips">${QR_Q.map(([k,i,l])=>`<button class="chip ${k===m?'on':''}" data-q="${k}">${i} ${l}</button>`).join('')}</div>
   </div>
-  <div class="sheet ${QR.min?'min':''}"><button class="grab" id="qgrab">${QR.min?'▴ afficher les détails':'▾ réduire'}</button><div class="phase" id="qph"></div>
-  <canvas id="qleg" width="340" height="72"></canvas><div class="band" id="qband"></div>
-  <div class="body">
-    ${c_top}
-    ${eqCalibNote()}
-    ${c_mid}
-    ${m==='o2'?'<canvas id="qch" width="340" height="120"></canvas><div class="small" id="qchT"></div>':''}
-    <h3>Équation${F.registry.filter(e=>e.fields.includes(m)).length>1?'s':''} utilisée${F.registry.filter(e=>e.fields.includes(m)).length>1?'s':''}</h3>
-    ${qrEquations()}
-    <h3>Dimensions de la chambre</h3>
-    ${qrDims()}
-    <div class="small foot">Hauteur du canal exagérée ×${S.exag} à l'affichage (largeur et longueur à l'échelle).${m==='o2'?' Contour pointillé : zone occupée par les cellules ; hors de cette zone, pas de consommation cellulaire.':''} ${qrNote()} Prédiction du modèle — non mesurée.</div>
-  </div></div>`;
+  
+  <div class="sheet ${QR.min?'min':''}">
+    <button class="grab" id="qgrab">${QR.min?'▴ afficher les contrôles':'▾ masquer'}</button>
+    
+    <!-- 1. Colorimetric Legend Bar with Dynamic Shifting Calipers -->
+    <canvas id="qleg" width="340" height="68"></canvas>
+    <div class="band" id="qband" style="font-size:10.5px;margin:1px 0 4px;color:var(--ink)"></div>
+
+    <!-- 2. Dynamic Phase Banner -->
+    <div id="cycle_status_banner" style="display:flex;align-items:center;font-size:11px;font-weight:700;padding:5px 8px;border-radius:6px;border:1px solid ${isPulse?'rgba(225,29,72,0.35)':'rgba(2,132,199,0.35)'};background:${isPulse?'rgba(225,29,72,0.12)':'rgba(2,132,199,0.12)'};color:${isPulse?'#fb7185':'#38bdf8'};margin-bottom:6px">
+      <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${isPulse?'#e11d48':'#0284c7'};margin-right:6px;box-shadow:0 0 6px ${isPulse?'#e11d48':'#0284c7'}"></span>
+      ${isPulse?'<b>0–5 min : PERFUSION ACTIVE</b> · Apport nutriments (10.8 µL/min) · Récolte OUT1':'<b>5–35 min : STASE PERMISSIVE</b> · Diapédèse 7 µm sans traînée (Q = 0) · Déplétion O₂'}
+    </div>
+
+    <!-- 3. Primary Cycle Timeline Slider (0 - 35 min) & Time Accelerations -->
+    <div class="ctl" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:6px 9px;margin-bottom:6px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
+        <span style="font-size:11px;font-weight:700;color:var(--ink)">⏱️ CYCLE TEMPOREL (0 – 35 min)</span>
+        <span id="cycle_time_readout" class="mono" style="font-size:11.5px;font-weight:800;color:#38bdf8">${(phys.t_sec/60).toFixed(1)} min / 35.0 min</span>
+      </div>
+      
+      <div class="slider-wrap" style="position:relative;width:100%;margin:2px 0">
+        <input id="qt" type="range" min="0" max="1000" step="1" value="${S.v}" style="width:100%;cursor:pointer;margin:4px 0;background:linear-gradient(to right, #009E73 0%, #009E73 50%, #0284c7 50%, #0284c7 100%)">
+      </div>
+      
+      <div style="display:flex;justify-content:space-between;width:100%;font-size:9.5px;color:var(--mut);margin-top:1px;font-family:sans-serif">
+        <span id="tag_perf" style="color:#009E73;font-weight:700;cursor:pointer">0 min · Perfusion</span>
+        <span id="tag_split" style="color:#f59e0b;font-weight:700;cursor:pointer">5 min · Bascule</span>
+        <span id="tag_stasis" style="color:#56B4E9;font-weight:700;cursor:pointer">35 min · Stase</span>
+      </div>
+
+      <!-- Play & Time Acceleration Buttons -->
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:6px;border-top:1px solid rgba(255,255,255,0.06);padding-top:6px">
+        <button id="qplay" class="chip" style="min-width:76px;font-weight:700;padding:3px 9px">${S.play?'⏸ pause':'▶ lecture'}</button>
+        <div style="display:flex;gap:4px;align-items:center">
+          <span style="font-size:10.5px;color:var(--mut);font-weight:600">Vitesse :</span>
+          <button id="qspd_1" class="chip speed-chip ${S.speed===1?'on':''}" style="padding:2px 7px;font-size:11px;font-weight:700">×1</button>
+          <button id="qspd_20" class="chip speed-chip ${S.speed===20?'on':''}" style="padding:2px 7px;font-size:11px;font-weight:700">×20</button>
+          <button id="qspd_200" class="chip speed-chip ${S.speed===200?'on':''}" style="padding:2px 7px;font-size:11px;font-weight:700">×200</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Dynamic Live Telemetry Gauges (Hydrodynamic & Oxygen) -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">
+      <!-- Card 1 : Hydrodynamique Canal -->
+      <div style="background:rgba(15,23,42,0.45);border:1px solid rgba(148,163,184,0.18);border-radius:8px;padding:5px 8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:9.5px;color:var(--mut);font-weight:700;text-transform:uppercase;letter-spacing:0.4px">
+          <span>🌊 Écoulement</span>
+          <span id="dyn_flow_badge" style="color:${isPulse?'#009E73':'#56B4E9'};font-weight:800">${isPulse?'ACTIF':'STASE'}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px">
+          <span style="font-size:10.5px;color:var(--ink)">Débit Q :</span>
+          <span id="dyn_q_val" class="mono" style="font-size:11px;font-weight:800;color:${isPulse?'#009E73':'#56B4E9'}">${phys.Q.toFixed(1)} µL/min</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:1px">
+          <span style="font-size:10.5px;color:var(--ink)">Cisaillement :</span>
+          <span id="dyn_tau_val" class="mono" style="font-size:11px;font-weight:800;color:${isPulse?'#009E73':'#56B4E9'}">${phys.tau_w.toFixed(2)} dyn/cm²</span>
+        </div>
+        <div style="width:100%;height:3px;background:rgba(255,255,255,0.1);border-radius:2px;margin-top:4px;overflow:hidden">
+          <div id="dyn_flow_bar" style="width:${(phys.Q/10.8*100).toFixed(0)}%;height:100%;background:${isPulse?'#009E73':'#56B4E9'};transition:width 0.1s linear,background 0.2s"></div>
+        </div>
+      </div>
+
+      <!-- Card 2 : Teneurs en Oxygène -->
+      <div style="background:rgba(15,23,42,0.45);border:1px solid rgba(148,163,184,0.18);border-radius:8px;padding:5px 8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:9.5px;color:var(--mut);font-weight:700;text-transform:uppercase;letter-spacing:0.4px">
+          <span>🫧 Teneurs en O₂</span>
+          <span id="dyn_o2_badge" style="color:#38bdf8;font-weight:800">${isPulse?'PHYSIOXIE':'DÉPLÉTION'}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px">
+          <span style="font-size:10.5px;color:var(--ink)">Canal (40 µm) :</span>
+          <span id="dyn_o2_vasc" class="mono" style="font-size:11px;font-weight:800;color:#009E73">${isPulse?(phys.o2_vasc_in.toFixed(1)+'% ➔ '+phys.o2_vasc_out.toFixed(1)+'%'):phys.o2_vasc_in.toFixed(1)+'%'}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:1px">
+          <span style="font-size:10.5px;color:var(--ink)">Niche CSM :</span>
+          <span id="dyn_o2_niche" class="mono" style="font-size:11px;font-weight:800;color:#38bdf8">${phys.o2_niche_basal.toFixed(1)}% O₂</span>
+        </div>
+        <div style="width:100%;height:3px;background:rgba(255,255,255,0.1);border-radius:2px;margin-top:4px;overflow:hidden">
+          <div id="dyn_o2_bar" style="width:${Math.max(0,Math.min(100,(phys.o2_vasc_mean/5.0*100))).toFixed(0)}%;height:100%;background:#38bdf8;transition:width 0.1s linear,background 0.2s"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Collapsible Expert Drawer (Simplified but not too much) -->
+    <details class="expert-box" style="background:rgba(15,23,42,0.35);border:1px solid rgba(148,163,184,0.16);border-radius:8px;padding:6px 8px;margin-top:4px">
+      <summary style="cursor:pointer;font-weight:700;font-size:11px;color:#38bdf8;user-select:none;padding:2px 0;display:flex;align-items:center;justify-content:space-between">
+        <span>🔬 Mode Interactif & Paramètres Avancés</span>
+        <span style="font-size:10px;color:var(--mut)">▾ Déployer</span>
+      </summary>
+      <div class="body" style="margin-top:8px;border-top:1px solid rgba(148,163,184,0.15);padding-top:8px">
+        ${c_top}
+        ${eqCalibNote()}
+        <div style="margin:8px 0;display:flex;gap:4px;align-items:center">
+          <span style="font-size:11px;color:var(--mut)">Unité O₂ :</span>
+          <button class="chip ${QR.unit==='pct'?'on':''}" id="qunit_pct">% O₂</button>
+          <button class="chip ${QR.unit==='mmhg'?'on':''}" id="qunit_mmhg">mmHg</button>
+        </div>
+        <div style="margin:8px 0;display:flex;flex-wrap:wrap;gap:6px 12px">
+          <label style="font-size:11px;display:flex;align-items:center;gap:4px"><input type="checkbox" id="qchk_hsc" ${S.showHSC!==false?'checked':''}> LT-HSC (Sommet)</label>
+          <label style="font-size:11px;display:flex;align-items:center;gap:4px"><input type="checkbox" id="qchk_msc" ${S.showMSC!==false?'checked':''}> CSM (Stroma)</label>
+          <label style="font-size:11px;display:flex;align-items:center;gap:4px"><input type="checkbox" id="qchk_neutro" ${S.showNeutro!==false?'checked':''}> Neutrophiles (Aval)</label>
+          <label style="font-size:11px;display:flex;align-items:center;gap:4px"><input type="checkbox" id="qchk_osteo" ${S.showOsteo!==false?'checked':''}> Ostéo. (Plafond ⚠️)</label>
+          <label style="font-size:11px;display:flex;align-items:center;gap:4px"><input type="checkbox" id="qchk_diff" ${S.showDiff!==false?'checked':''}> Gradient Krogh 3D</label>
+          <label style="font-size:11px;display:flex;align-items:center;gap:4px"><input type="checkbox" id="qchk_realscale" ${S.realScale?'checked':''}> Échelle réelle 1:1</label>
+        </div>
+        ${m==='o2'?'<canvas id="qch" width="340" height="110"></canvas><div class="small" id="qchT"></div>':''}
+        <h3>Équations utilisées</h3>
+        ${qrEquations()}
+        <h3>Dimensions de la chambre</h3>
+        ${qrDims()}
+        <div class="small foot">Hauteur du canal exagérée ×${S.exag} à l'affichage (largeur et longueur à l'échelle vraie). Prédiction biophysique calibrée LOEX.</div>
+      </div>
+    </details>
+  </div>`;
   const mcoc=$('#qmat_coc'),mpdms=$('#qmat_pdms');
   if(mcoc)mcoc.addEventListener('click',()=>{
     S.mat='COC';const n=notchOfSid(S.sid);S.sid=sidOfNotch(n,'COC');
@@ -4074,6 +4237,18 @@ function renderQR(){
   const mt=$('#qmat');if(mt){mt.value=S.mat;mt.addEventListener('input',()=>{S.mat=mt.value;dirty=true;sync();});}
   const pl=$('#qplay');if(pl)pl.addEventListener('click',()=>{S.play=!S.play;sync();});
   const qt=$('#qt');if(qt)qt.addEventListener('input',()=>{S.v=+qt.value;S.t=tOfV(S.v);S.play=false;dirty=true;sync();});
+  
+  // Speed acceleration toggles (x1, x20, x200)
+  const sp1=$('#qspd_1'), sp20=$('#qspd_20'), sp200=$('#qspd_200');
+  if(sp1) sp1.addEventListener('click', ()=>{ S.speed=1; S.play=true; sync(); });
+  if(sp20) sp20.addEventListener('click', ()=>{ S.speed=20; S.play=true; sync(); });
+  if(sp200) sp200.addEventListener('click', ()=>{ S.speed=200; S.play=true; sync(); });
+
+  // Phase tag click shortcuts
+  const tagPerf=$('#tag_perf'), tagSplit=$('#tag_split'), tagStasis=$('#tag_stasis');
+  if(tagPerf) tagPerf.addEventListener('click', ()=>{ S.v=0; S.t=0; dirty=true; sync(); });
+  if(tagSplit) tagSplit.addEventListener('click', ()=>{ S.v=500; S.t=300; dirty=true; sync(); });
+  if(tagStasis) tagStasis.addEventListener('click', ()=>{ S.v=750; S.t=1200; dirty=true; sync(); });
   const thBtn=$('#qtheme_toggle');
   if(thBtn)thBtn.addEventListener('click',()=>{applyTheme(S.theme==='light'?'dark':'light');});
   const z=$('#qzones'),g=$('#qgrad');if(z)z.addEventListener('click',()=>{QR.bandOn=true;qrCmode();renderQR();});if(g)g.addEventListener('click',()=>{QR.bandOn=false;qrCmode();renderQR();});
@@ -4150,23 +4325,89 @@ function qrCmode(){S.cmode=(S.mode==='o2'||S.mode==='shear'||S.mode==='velocity'
 function qrOffset(){const w=window.innerWidth,h=window.innerHeight,sh=$('#qr .sheet');if(!sh){return;}
   if(w>=900)camera.setViewOffset(w,h,sh.offsetWidth/2,0,w,h);else camera.setViewOffset(w,h,0,Math.min(sh.offsetHeight,h*0.6)/2,w,h);camera.updateProjectionMatrix();}
 let lastCalibPhase = null;
-function qrSync(){const set=(id,t)=>{const e=$('#'+id);if(e)e.textContent=t;};
-  set('qph',qrPhase());set('qtv',(S.t/60).toFixed(1)+' min');
-  const t=$('#qt');if(t&&document.activeElement!==t)t.value=S.v;const bp=$('#qplay');if(bp)bp.textContent=S.play?'⏸ pause':'▶ lecture';
+function qrSync(){
+  const set=(id,t)=>{const e=$('#'+id);if(e)e.textContent=t;};
+  const phys = getCyclePhysics(S.t);
   
-  const isCycStasis = (S.v > 500) || (S.fph === 'stasis') || (cycOf() && phaseAt(S.t) && phaseAt(S.t).flow_factor === 0);
-  const phaseTag = $('#cycle_phase_tag');
-  if(phaseTag){
-    phaseTag.textContent = isCycStasis ? '⏸ STASE (Q = 0)' : '▶ PERFUSION ACTIVE';
-    phaseTag.style.color = isCycStasis ? '#56B4E9' : '#009E73';
+  // 1. Time display
+  const tMin = (phys.t_sec / 60.0).toFixed(1);
+  set('qtv', tMin + ' min');
+  set('cycle_time_readout', tMin + ' min / 35.0 min');
+
+  // 2. Slider update if not dragging
+  const tSlider = $('#qt');
+  if(tSlider && document.activeElement !== tSlider){
+    tSlider.value = S.v;
+  }
+  
+  // 3. Play button text
+  const bp = $('#qplay');
+  if(bp) bp.textContent = S.play ? '⏸ pause' : '▶ lecture';
+
+  // 4. Speed pills highlight
+  const sp1=$('#qspd_1'), sp20=$('#qspd_20'), sp200=$('#qspd_200');
+  if(sp1) sp1.classList.toggle('on', S.speed === 1);
+  if(sp20) sp20.classList.toggle('on', S.speed === 20);
+  if(sp200) sp200.classList.toggle('on', S.speed === 200);
+
+  // 5. Dynamic Phase Banner
+  const banner = $('#cycle_status_banner');
+  if(banner){
+    if(phys.isPulse){
+      banner.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#e11d48;margin-right:6px;box-shadow:0 0 6px #e11d48"></span><b>0–5 min : PERFUSION ACTIVE</b> · Apport O₂ & nutriments · Récolte OUT1`;
+      banner.style.background = 'rgba(225, 29, 72, 0.12)';
+      banner.style.borderColor = 'rgba(225, 29, 72, 0.35)';
+      banner.style.color = '#fb7185';
+    } else {
+      banner.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#0284c7;margin-right:6px;box-shadow:0 0 6px #0284c7"></span><b>5–35 min : STASE PERMISSIVE</b> · Diapédèse sans traînée (Q = 0) · Déplétion O₂`;
+      banner.style.background = 'rgba(2, 132, 199, 0.12)';
+      banner.style.borderColor = 'rgba(2, 132, 199, 0.35)';
+      banner.style.color = '#38bdf8';
+    }
   }
 
-  const curPhaseName = isCycStasis ? 'stasis' : 'pulse';
+  // 6. Dynamic Telemetry values & bars
+  set('dyn_q_val', phys.Q.toFixed(1) + ' µL/min');
+  set('dyn_tau_val', phys.tau_w.toFixed(2) + ' dyn/cm²');
+  
+  const dynFlowBadge = $('#dyn_flow_badge');
+  if(dynFlowBadge){
+    dynFlowBadge.textContent = phys.isPulse ? 'ACTIF' : 'STASE';
+    dynFlowBadge.style.color = phys.isPulse ? '#009E73' : '#56B4E9';
+  }
+  const dynFlowBar = $('#dyn_flow_bar');
+  if(dynFlowBar){
+    const pct = (phys.Q / 10.8) * 100;
+    dynFlowBar.style.width = pct.toFixed(0) + '%';
+    dynFlowBar.style.background = phys.isPulse ? '#009E73' : '#56B4E9';
+  }
+
+  if(phys.isPulse){
+    set('dyn_o2_vasc', phys.o2_vasc_in.toFixed(1) + '% ➔ ' + phys.o2_vasc_out.toFixed(1) + '%');
+    set('dyn_o2_niche', phys.o2_niche_basal.toFixed(1) + '% O₂ (Physioxie)');
+  } else {
+    set('dyn_o2_vasc', phys.o2_vasc_in.toFixed(1) + '% (Déplétion)');
+    set('dyn_o2_niche', phys.o2_niche_basal.toFixed(1) + '% O₂ (' + (phys.o2_niche_basal < 0.1 ? 'Anoxie' : 'Chute') + ')');
+  }
+
+  const dynO2Badge = $('#dyn_o2_badge');
+  if(dynO2Badge){
+    dynO2Badge.textContent = phys.isPulse ? 'PHYSIOXIE' : (phys.o2_niche_basal < 0.1 ? 'ANOXIE' : 'DÉPLÉTION');
+    dynO2Badge.style.color = phys.isPulse ? '#38bdf8' : (phys.o2_niche_basal < 0.1 ? '#94a3b8' : '#e69f00');
+  }
+  const dynO2Bar = $('#dyn_o2_bar');
+  if(dynO2Bar){
+    const pctO2 = (phys.o2_vasc_mean / 5.0) * 100;
+    dynO2Bar.style.width = Math.min(100, Math.max(0, pctO2)).toFixed(0) + '%';
+    dynO2Bar.style.background = phys.isPulse ? '#38bdf8' : '#94a3b8';
+  }
+
+  // 7. Update calibration equations if phase flipped
+  const curPhaseName = phys.isPulse ? 'pulse' : 'stasis';
   if(curPhaseName !== lastCalibPhase){
     lastCalibPhase = curPhaseName;
     const calibBox = $('#eq_calib_box');
     if(calibBox) calibBox.innerHTML = eqCalibInner();
-    if(window.qrLegend) qrLegend();
   }
   if(S.mode==='o2'&&$('#qch')){const sc=F.o2[S.sid];const ts=sc.series.map(s=>s.t_s),mean=sc.series.map(s=>s.mean_main_mmHg),mn=sc.series.map(s=>s.min_main_mmHg),mx=sc.series.map(s=>s.max_main_mmHg);
     const isPct=(QR.unit==='pct');
@@ -4175,7 +4416,11 @@ function qrSync(){const set=(id,t)=>{const e=$('#'+id);if(e)e.textContent=t;};
     const meanConv=sc.series.map(s=>s.mean_main_mmHg/k),mnConv=sc.series.map(s=>s.min_main_mmHg/k),mxConv=sc.series.map(s=>s.max_main_mmHg/k);
     const lo=Math.min(...mnConv,0),hi=Math.max(...mxConv),win=[GD.physioxia_window_mmHg[0]/k,GD.physioxia_window_mmHg[1]/k];
     lineChart($('#qch'),[{x:ts,y:mxConv,color:'#556',lw:1},{x:ts,y:mnConv,color:'#556',lw:1},{x:ts,y:meanConv,color:'#56B4E9',lw:2}],0,ts[ts.length-1],lo,hi,'s','',(c,X,Y)=>{c.fillStyle='rgba(0,158,115,.28)';c.fillRect(X(0),Y(win[1]),X(ts[ts.length-1])-X(0),Y(win[0])-Y(win[1]));c.strokeStyle='#fff';c.beginPath();c.moveTo(X(S.t),Y(lo));c.lineTo(X(S.t),Y(hi));c.stroke();});
-    set('qchT',`pO₂ moyenne (min–max) sur la zone cellulaire en ${unitStr} (équiv. 37°C sat.) — bande verte : physioxie (${fmt(win[0],2)} à ${fmt(win[1],2)} ${unitStr})`);}}
+    set('qchT',`pO₂ moyenne (min–max) sur la zone cellulaire en ${unitStr} (équiv. 37°C sat.) — bande verte : physioxie (${fmt(win[0],2)} à ${fmt(win[1],2)} ${unitStr})`);}
+
+  // 8. Re-render dynamic colorimetric bar calipers!
+  if(window.qrLegend) qrLegend();
+}
 function qrLegend(){
   const sc0=CUR.sc,cv=$('#qleg');if(!cv||!sc0)return;
   const isLight=(S.theme==='light');
