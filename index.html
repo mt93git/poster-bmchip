@@ -190,7 +190,7 @@
         <span class="dot pulse"></span>
         <span>Redirection automatique en cours</span>
       </div>
-      <a href="#" id="directBtn" class="btn">Accéder immédiatement</a>
+      <a href="https://mt93git.github.io/poster-bmchip/viewer3d.html" id="directBtn" class="btn">Accéder immédiatement</a>
     </div>
 
     <!-- ÉTAT OFF (KILL-SWITCH / SESSION CLÔTURÉE) -->
@@ -220,7 +220,8 @@
 
   <script>
     (async function initGatekeeper() {
-      const defaultTarget = "viewer3d.html";
+      // URL absolue canonique de secours (immunisée contre les pannes relatives)
+      const canonicalViewer = "https://mt93git.github.io/poster-bmchip/viewer3d.html";
       const directBtn = document.getElementById("directBtn");
       const loadingState = document.getElementById("loadingState");
       const offState = document.getElementById("offState");
@@ -242,23 +243,28 @@
           return;
         }
 
-        // Statut ON : détermination de la cible
-        const target = config.target_url || defaultTarget;
+        // Statut ON : résolution stricte d'URL absolue
+        let target = config.target_url || canonicalViewer;
+        if (!target.startsWith("http://") && !target.startsWith("https://")) {
+          // Résolution absolue anti-404
+          const base = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/');
+          target = new URL(target, base).href;
+        }
+
         directBtn.href = target;
         dynTitle.textContent = config.project_title || "Redirection vers le Jumeau 3D...";
 
-        // Redirection fluide après 1.2 seconde (permet au visiteur de voir l'écran d'accueil)
+        // Redirection fluide après 1 seconde
         setTimeout(() => {
           window.location.replace(target);
-        }, 1200);
+        }, 1000);
 
       } catch (err) {
-        console.warn("Mode dégradé / local :", err);
-        // Fallback résilient en cas d'absence de réseau ou d'erreur de config
-        directBtn.href = defaultTarget;
+        console.warn("Mode fallback direct :", err);
+        directBtn.href = canonicalViewer;
         setTimeout(() => {
-          window.location.replace(defaultTarget);
-        }, 1500);
+          window.location.replace(canonicalViewer);
+        }, 1200);
       }
     })();
   </script>
